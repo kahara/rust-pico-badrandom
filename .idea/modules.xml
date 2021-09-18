@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/rust-randombit.iml" filepath="$PROJECT_DIR$/.idea/rust-randombit.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/rust-pico-badrandom.iml" filepath="$PROJECT_DIR$/.idea/rust-pico-badrandom.iml" />
     </modules>
   </component>
 </project>
