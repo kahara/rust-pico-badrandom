@@ -1,4 +1,5 @@
-use std::io::{self, Write};
+#![no_std]
+#![no_main]
 
 #[derive(Debug, Copy, Clone)]
 struct Lfsr {
@@ -23,25 +24,13 @@ impl Iterator for Lfsr {
     }
 }
 
-fn main() -> io::Result<()> {
+#[entry]
+fn main() -> ! {
     let lfsr = Lfsr::new();
     let mut byte: u8 = 0x0;
     let mut bit: u8 = 0x0;
-    let mut buffer: [u8; 1] = [0];
-    let stdout = io::stdout();
-    let mut out = stdout.lock();
 
     for x in lfsr {
-        byte = byte | ((x as u8) << bit);
-        if bit == 7 {
-            buffer[0] = byte; // FIXME: do without?
-            out.write(&buffer)?;
-            byte = 0;
-            bit = 0;
-        } else {
-            bit = bit + 1;
-        }
-    }
 
-    Ok(())
+    }
 }
