@@ -8,33 +8,11 @@ use rp2040_pac as pac;
 
 mod pll;
 mod resets;
+mod lfsr;
 
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
-
-#[derive(Debug, Copy, Clone)]
-struct Lfsr {
-    start: u16,
-}
-
-impl Lfsr {
-    pub fn new() -> Self {
-        Lfsr { start: 0xffff }
-    }
-}
-
-impl Iterator for Lfsr {
-    type Item = bool;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let bit =
-            ((self.start >> 0) ^ (self.start >> 2) ^ (self.start >> 3) ^ (self.start >> 5)) & 1;
-
-        self.start = (self.start >> 1) | (bit << 15);
-        Some((bit & 0x1) != 0)
-    }
-}
 
 fn init(
     resets: pac::RESETS,
@@ -113,7 +91,7 @@ fn main() -> ! {
     init(p.RESETS,p.WATCHDOG, p.CLOCKS, p.XOSC, p.PLL_SYS, p.PLL_USB);
 
     let output = 15;
-    let lfsr = Lfsr::new();
+    let lfsr = lfsr::Lfsr::new();
 
     p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
         w.oeover().enable();
