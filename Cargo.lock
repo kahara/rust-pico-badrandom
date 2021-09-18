@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "rust-randombit"
+name = "rust-pico-badrandom"
 version = "0.1.0"
