@@ -91,15 +91,24 @@ fn main() -> ! {
     init(p.RESETS,p.WATCHDOG, p.CLOCKS, p.XOSC, p.PLL_SYS, p.PLL_USB);
 
     let output = 15;
+    let led = 25;
     let lfsr = lfsr::Lfsr::new();
 
     p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
         w.oeover().enable();
         w
     });
+    p.IO_BANK0.gpio[led].gpio_ctrl.write(|w| {
+        w.oeover().enable();
+        w
+    });
 
     for x in lfsr {
         p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
+            if x { w.outover().high() } else { w.outover().low()};
+            w
+        });
+        p.IO_BANK0.gpio[led].gpio_ctrl.write(|w| {
             if x { w.outover().high() } else { w.outover().low()};
             w
         });
