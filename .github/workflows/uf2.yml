@@ -1,0 +1,23 @@
+on: [push, pull_request]
+name: Build UF2 flashable
+jobs:
+  uf2:
+    name: UF2
+    runs-on: ubuntu-20.04
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv6m-none-eabi
+          override: true
+          profile: minimal
+      - run: cargo build --release
+      - run: cargo objcopy --release -- -O binary badrandom.bin
+      - run: uf2conv badrandom.bin --base 0x10000000 --family 0xe48bff56 --output badrandom.uf2
+      - uses: actions/upload-artifact@v2
+        with:
+          name: uf2
+          path: badrandom.uf2
