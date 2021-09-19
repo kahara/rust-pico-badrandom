@@ -15,6 +15,7 @@ jobs:
           target: thumbv6m-none-eabi
           override: true
           profile: minimal
+      - run: cargo install uf2conv cargo-binutils
       - run: cargo objcopy --release -- -O binary badrandom.bin
       - run: uf2conv badrandom.bin --base 0x10000000 --family 0xe48bff56 --output badrandom.uf2
       - uses: actions/upload-artifact@v2
