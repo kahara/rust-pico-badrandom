@@ -9,15 +9,8 @@ jobs:
       RUST_BACKTRACE: "1"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: thumbv6m-none-eabi
-          override: true
-          profile: minimal
-      - run: cargo install uf2conv cargo-binutils
-      - run: cargo objcopy --release -- -O binary badrandom.bin
-      - run: uf2conv badrandom.bin --base 0x10000000 --family 0xe48bff56 --output badrandom.uf2
+      - run: docker build --tag badrandom .
+      - run: docker run --rm -it -v $PWD:$PWD badrandom $PWD
       - uses: actions/upload-artifact@v2
         with:
           name: uf2

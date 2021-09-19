@@ -12,6 +12,7 @@ Prep:
 apt install gcc-arm-none-eabi gdb-multiarch
 rustup target add thumbv6m-none-eabi
 rustup component add llvm-tools-preview
+cargo install uf2conv cargo-binutils
 ```
 
 UF2 for flashing:
