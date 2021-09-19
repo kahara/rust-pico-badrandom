@@ -1,8 +1,8 @@
 #![no_std]
 #![no_main]
-#![feature(asm)]
 
 use cortex_m_rt::entry;
+use defmt_rtt as _;
 use panic_probe as _;
 use rp2040_pac as pac;
 
