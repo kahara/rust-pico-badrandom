@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use core::sync::atomic::{AtomicUsize, Ordering};
 use cortex_m_rt::entry;
 use defmt_rtt as _;
 use panic_probe as _;
@@ -13,6 +14,15 @@ mod lfsr;
 #[link_section = ".boot2"]
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
+
+#[defmt::timestamp]
+fn timestamp() -> u64 {
+    static COUNT: AtomicUsize = AtomicUsize::new(0);
+    // NOTE(no-CAS) `timestamps` runs with interrupts disabled
+    let n = COUNT.load(Ordering::Relaxed);
+    COUNT.store(n + 1, Ordering::Relaxed);
+    n as u64
+}
 
 fn init(
     resets: pac::RESETS,
@@ -94,24 +104,30 @@ fn main() -> ! {
     let led = 25;
     let lfsr = lfsr::Lfsr::new();
 
-    p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
-        w.oeover().enable();
-        w
-    });
-    p.IO_BANK0.gpio[led].gpio_ctrl.write(|w| {
-        w.oeover().enable();
-        w
-    });
-
     for x in lfsr {
-        p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
-            if x { w.outover().high() } else { w.outover().low()};
-            w
-        });
-        p.IO_BANK0.gpio[led].gpio_ctrl.write(|w| {
-            if x { w.outover().high() } else { w.outover().low()};
-            w
-        });
+        if x {
+            p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
+                w.oeover().enable();
+                w.outover().high();
+                w
+            });
+            p.IO_BANK0.gpio[led].gpio_ctrl.write(|w| {
+                w.oeover().enable();
+                w.outover().high();
+                w
+            });
+        } else {
+            p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
+                w.oeover().enable();
+                w.outover().low();
+                w
+            });
+            p.IO_BANK0.gpio[led].gpio_ctrl.write(|w| {
+                w.oeover().enable();
+                w.outover().low();
+                w
+            });
+        }
     }
 
     loop { cortex_m::asm::nop(); }
