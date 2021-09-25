@@ -1,4 +1,4 @@
-on: [push, pull_request]
+on: [push]
 name: Build UF2 flashable
 jobs:
   uf2:
