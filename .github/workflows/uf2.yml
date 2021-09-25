@@ -1,0 +1,17 @@
+on: [push]
+name: Build UF2 flashable
+jobs:
+  uf2:
+    name: UF2
+    runs-on: ubuntu-20.04
+    env:
+      RUSTFLAGS: "-D warnings"
+      RUST_BACKTRACE: "1"
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker build --tag badrandom .
+      - run: docker run --rm -v $PWD:$PWD badrandom $PWD
+      - uses: actions/upload-artifact@v2
+        with:
+          name: uf2
+          path: badrandom.uf2

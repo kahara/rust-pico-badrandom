@@ -1,46 +1,124 @@
-use std::io::{self, Write};
+#![no_std]
+#![no_main]
 
-#[derive(Debug, Copy, Clone)]
-struct Lfsr {
-    start: u32,
+use cortex_m_rt::entry;
+use defmt_rtt as _;
+use panic_probe as _;
+use rp2040_pac as pac;
+
+mod pll;
+mod resets;
+mod lfsr;
+
+#[link_section = ".boot2"]
+#[used]
+pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER;
+
+fn init(
+    resets: pac::RESETS,
+    watchdog: pac::WATCHDOG,
+    clocks: pac::CLOCKS,
+    xosc: pac::XOSC,
+    pll_sys: pac::PLL_SYS,
+    pll_usb: pac::PLL_USB,
+) {
+    // Now reset all the peripherals, except QSPI and XIP (we're using those
+    // to execute from external flash!)
+
+    let resets = resets::Resets::new(resets);
+
+    // Reset everything except:
+    // - QSPI (we're using it to run this code!)
+    // - PLLs (it may be suicide if that's what's clocking us)
+    resets.reset(!(resets::IO_QSPI | resets::PADS_QSPI | resets::PLL_SYS | resets::PLL_USB));
+
+    resets.unreset_wait(
+        resets::ALL
+            & !(resets::ADC
+            | resets::RTC
+            | resets::SPI0
+            | resets::SPI1
+            | resets::UART0
+            | resets::UART1
+            | resets::USBCTRL),
+    );
+
+    // xosc 12 mhz
+    watchdog
+        .tick
+        .write(|w| unsafe { w.cycles().bits(XOSC_MHZ as u16).enable().set_bit() });
+
+    clocks.clk_sys_resus_ctrl.write(|w| unsafe { w.bits(0) });
+
+    // Enable XOSC
+    // TODO extract to HAL module
+    const XOSC_MHZ: u32 = 12;
+    xosc.ctrl.write(|w| w.freq_range()._1_15mhz());
+    let startup_delay = (((XOSC_MHZ * 1_000_000) / 1000) + 128) / 256;
+    xosc.startup
+        .write(|w| unsafe { w.delay().bits(startup_delay as u16) });
+    xosc.ctrl
+        .write(|w| w.freq_range()._1_15mhz().enable().enable());
+
+    while !xosc.status.read().stable().bit_is_set() {}
+
+    // Before we touch PLLs, switch sys and ref cleanly away from their aux sources.
+    clocks.clk_sys_ctrl.modify(|_, w| w.src().clk_ref());
+    while clocks.clk_sys_selected.read().bits() != 1 {}
+    clocks.clk_ref_ctrl.modify(|_, w| w.src().rosc_clksrc_ph());
+    while clocks.clk_ref_selected.read().bits() != 1 {}
+
+    resets.reset(resets::PLL_SYS | resets::PLL_USB);
+    resets.unreset_wait(resets::PLL_SYS | resets::PLL_USB);
+
+    pll::PLL::new(pll_sys).configure(1, 888_000_000, 3, 1);
+    pll::PLL::new(pll_usb).configure(1, 480_000_000, 5, 2);
+
+    // Switch clk_sys to pll_sys
+    clocks
+        .clk_sys_ctrl
+        .modify(|_, w| w.auxsrc().clksrc_pll_sys());
+    clocks
+        .clk_sys_ctrl
+        .modify(|_, w| w.src().clksrc_clk_sys_aux());
+    while clocks.clk_sys_selected.read().bits() != 2 {}
 }
 
-impl Lfsr {
-    pub fn new() -> Self {
-        Lfsr { start: 0xa5a5a5a5 }
-    }
-}
+#[entry]
+fn main() -> ! {
+    let p = pac::Peripherals::take().unwrap();
 
-impl Iterator for Lfsr {
-    type Item = bool;
+    init(p.RESETS,p.WATCHDOG, p.CLOCKS, p.XOSC, p.PLL_SYS, p.PLL_USB);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let bit = ((self.start >> 1) ^ (self.start >> 4)) & 1;
-
-        self.start = (self.start >> 1) | (bit << 31);
-        Some((bit & 0x1) != 0)
-    }
-}
-
-fn main() -> io::Result<()> {
-    let lfsr = Lfsr::new();
-    let mut byte: u8 = 0x0;
-    let mut bit: u8 = 0x0;
-    let mut buffer: [u8; 1] = [0];
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
+    let output = 15;
+    let led = 25;
+    let lfsr = lfsr::Lfsr::new();
 
     for x in lfsr {
-        byte = byte | ((x as u8) << bit);
-        if bit == 7 {
-            buffer[0] = byte; // FIXME: do without?
-            handle.write(&buffer)?;
-            byte = 0;
-            bit = 0;
+        if x {
+            p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
+                w.oeover().enable();
+                w.outover().high();
+                w
+            });
+            p.IO_BANK0.gpio[led].gpio_ctrl.write(|w| {
+                w.oeover().enable();
+                w.outover().high();
+                w
+            });
         } else {
-            bit = bit + 1;
+            p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
+                w.oeover().enable();
+                w.outover().low();
+                w
+            });
+            p.IO_BANK0.gpio[led].gpio_ctrl.write(|w| {
+                w.oeover().enable();
+                w.outover().low();
+                w
+            });
         }
     }
 
-    Ok(())
+    loop { cortex_m::asm::nop(); }
 }
