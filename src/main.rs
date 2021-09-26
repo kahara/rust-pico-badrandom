@@ -95,6 +95,8 @@ fn main() -> ! {
     let lfsr = lfsr::Lfsr::new();
 
     for x in lfsr {
+        cortex_m::asm::delay(100);
+
         if x {
             p.IO_BANK0.gpio[output].gpio_ctrl.write(|w| {
                 w.oeover().enable();
