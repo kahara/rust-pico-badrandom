@@ -1,34 +1,28 @@
 [package]
 name = "rust-pico-badrandom"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 resolver = "2"
 
 [dependencies]
 cortex-m = { version = "0.7.3" }  #, features = ["inline-asm"] }
-cortex-m-rt = "0.7.0"
-
+cortex-m-rt = { version = "0.7.0", optional = true }
+rp2040-boot2 = { version = "0.2.0", optional = true }
+rp2040-hal = { version = "0.3.0"}
+embedded-hal ="0.2.5"
+embedded-time = "0.12.0"
+panic-halt = "0.2.0"
+rp-pico = "0.2.0"
 defmt = "0.2.0"
 defmt-rtt = "0.2.0"
-panic-probe = { version = "0.2.0", features = ["print-defmt"] }
-
-rp2040-pac = { git = "https://github.com/rp-rs/rp2040-pac", branch="main" }
-rp2040-boot2 = { version="0.1" }
-#rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs", branch="main" }
-
-#[patch.crates-io]
-#cortex-m = { git = "https://github.com/rust-embedded/cortex-m" }
 
 [features]
 default = [
-    "defmt-default",
+    "boot2",
+    "rt"
 ]
-defmt-default = []
-defmt-trace = []
-defmt-debug = []
-defmt-info = []
-defmt-warn = []
-defmt-error = []
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]
 
 [profile.dev]
 codegen-units = 1
