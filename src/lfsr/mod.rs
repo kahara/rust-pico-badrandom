@@ -4,19 +4,17 @@ pub struct Lfsr {
 }
 
 impl Lfsr {
-    pub fn new() -> Self {
-        Lfsr { start: 0xffff }
+    pub fn new(start: u16) -> Self {
+        Lfsr { start: start }
     }
 }
 
-impl Iterator for Lfsr {
-    type Item = bool;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl Lfsr {
+    pub fn next(&mut self) -> bool {
         let bit =
             ((self.start >> 0) ^ (self.start >> 2) ^ (self.start >> 3) ^ (self.start >> 5)) & 1;
 
         self.start = (self.start >> 1) | (bit << 15);
-        Some((bit & 0x1) != 0)
+        (bit & 0x1) != 0
     }
 }
