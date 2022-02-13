@@ -1,8 +1,6 @@
 # rust-pico-badrandom
 
-What it says on the tin.
-Set Raspberry Pi Pico's gpio 15 from a [16-bit LFSR](https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Fibonacci_LFSRs).
-For testing a randomness testing setup.
+Toggle Pico's LED and pin 31 (gpio 26), have random bit on pins 32, 34 (gpios 27, 28).
 
 ## Build
 
