@@ -1,7 +1,6 @@
-use rp2040_hal::{
-    clocks::ClocksManager,
-};
+use rp2040_hal::clocks::ClocksManager;
 use embedded_hal::digital::v2::OutputPin;
+use rp_pico::pac;
 
 use super::lfsr::Lfsr;
 use super::setup::{delay, pins};
@@ -20,7 +19,9 @@ impl Fiddler {
     }
 
     pub fn fiddle(self: Fiddler) -> ! {
-        let pins = pins();
+        let pac = unsafe { pac::Peripherals::steal() };
+
+        let pins = pins(pac);
 
         // toggle LED and pin 31
         let mut pin_25 = pins.led.into_push_pull_output();

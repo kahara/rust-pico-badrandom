@@ -10,7 +10,6 @@ use rp2040_hal::{
         ClocksManager,
         InitError
     },
-    pac,
     pll::{
         PLLConfig,
         common_configs::PLL_USB_48MHZ,
@@ -20,6 +19,7 @@ use rp2040_hal::{
     xosc::setup_xosc_blocking,
     Sio,
 };
+use rp_pico::pac;
 
 // 10ns per clock cycle for easier mentals
 pub const PLL_SYS_100MHZ: PLLConfig<Megahertz> = PLLConfig {
@@ -30,27 +30,28 @@ pub const PLL_SYS_100MHZ: PLLConfig<Megahertz> = PLLConfig {
 };
 
 pub fn clocks() -> Result<ClocksManager, InitError> {
-    let mut peripherals = pac::Peripherals::take().unwrap();
-    let mut watchdog = Watchdog::new(peripherals.WATCHDOG);
+    let mut pac = unsafe { pac::Peripherals::steal() };
 
-    watchdog.enable_tick_generation(rp_pico::XOSC_CRYSTAL_FREQ as u8);
-
-    let mut clocks = ClocksManager::new(peripherals.CLOCKS);
-    let xosc = setup_xosc_blocking(peripherals.XOSC,
+    let xosc = setup_xosc_blocking(pac.XOSC,
                                    rp_pico::XOSC_CRYSTAL_FREQ.Hz()).map_err(InitError::XoscErr)?;
 
+    let mut watchdog = Watchdog::new(pac.WATCHDOG);
+    watchdog.enable_tick_generation((rp_pico::XOSC_CRYSTAL_FREQ / 1_000_000) as u8);
+
+    let mut clocks = ClocksManager::new(pac.CLOCKS);
+
     // PLLs
-    let pll_sys = setup_pll_blocking(peripherals.PLL_SYS,
+    let pll_sys = setup_pll_blocking(pac.PLL_SYS,
                                      xosc.operating_frequency().into(),
                                      PLL_SYS_100MHZ,
                                      &mut clocks,
-                                     &mut peripherals.RESETS)
+                                     &mut pac.RESETS)
         .map_err(InitError::PllError)?;
-    let pll_usb = setup_pll_blocking(peripherals.PLL_USB,
+    let pll_usb = setup_pll_blocking(pac.PLL_USB,
                                      xosc.operating_frequency().into(),
                                      PLL_USB_48MHZ,
                                      &mut clocks,
-                                     &mut peripherals.RESETS)
+                                     &mut pac.RESETS)
         .map_err(InitError::PllError)?;
 
     clocks
@@ -61,12 +62,11 @@ pub fn clocks() -> Result<ClocksManager, InitError> {
 }
 
 pub fn delay(cm: ClocksManager) -> cortex_m::delay::Delay {
-    let core = pac::CorePeripherals::take().unwrap();
+    let core = unsafe { pac::CorePeripherals::steal() };
     cortex_m::delay::Delay::new(core.SYST, cm.system_clock.freq().integer())
 }
 
-pub fn pins() -> rp_pico::Pins {
-    let mut pac = pac::Peripherals::take().unwrap();
+pub fn pins(mut pac: pac::Peripherals) -> rp_pico::Pins {
     let sio = Sio::new(pac.SIO);
 
     rp_pico::Pins::new(

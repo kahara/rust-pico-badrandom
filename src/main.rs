@@ -1,14 +1,12 @@
 #![no_std]
 #![no_main]
 
-extern crate rust_pico_badrandom;
-
-// The macro for our start-up function
 use cortex_m_rt::entry;
-
-// Ensure we halt the program on panic (if we don't mention this crate it won't
-// be linked)
 use panic_halt as _;
+
+extern crate rust_pico_badrandom;
+extern crate rp_pico;
+extern crate rp2040_hal;
 
 use rust_pico_badrandom::setup;
 use rust_pico_badrandom::fiddler::*;

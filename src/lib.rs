@@ -3,6 +3,7 @@
 extern crate embedded_time;
 extern crate rp_pico;
 extern crate rp2040_hal;
+extern crate cortex_m;
 
 pub mod setup;
 pub mod lfsr;
